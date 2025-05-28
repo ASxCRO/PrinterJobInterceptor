@@ -4,9 +4,181 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PrinterJobInterceptor"
+        xmlns:viewmodels="clr-namespace:PrinterJobInterceptor.ViewModels"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Print Job Monitor" Height="600" Width="1000"
+        d:DataContext="{d:DesignInstance Type=viewmodels:MainViewModel}">
+    
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="MinWidth" Value="80"/>
+        </Style>
+        <Style TargetType="GroupBox">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2"/>
+        </Style>
+    </Window.Resources>
 
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Top Controls -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="Start Monitoring" Command="{Binding StartMonitoringCommand}" Margin="0,0,10,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                <Setter Property="IsEnabled" Value="False"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <Button Content="Stop Monitoring" Command="{Binding StopMonitoringCommand}" Margin="0,0,10,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                <Setter Property="IsEnabled" Value="False"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <TextBlock Text="Status:" VerticalAlignment="Center" Margin="10,0"/>
+            <TextBlock Text="{Binding StatusMessage}" 
+                       VerticalAlignment="Center" 
+                       Margin="5,0"
+                       Foreground="{Binding IsMonitoring, Converter={StaticResource BooleanToBrushConverter}, ConverterParameter='Green|Gray'}"/>
+        </StackPanel>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Print Jobs List -->
+            <DataGrid Grid.Column="0" 
+                      ItemsSource="{Binding PrintJobs}"
+                      SelectedItem="{Binding SelectedJob}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      GridLinesVisibility="Horizontal"
+                      BorderThickness="1"
+                      BorderBrush="#DDDDDD"
+                      CanUserSortColumns="True"
+                      CanUserResizeColumns="True"
+                      SelectionMode="Single"
+                      SelectionUnit="FullRow">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Document" Binding="{Binding DocumentName}" Width="*"/>
+                    <DataGridTextColumn Header="Owner" Binding="{Binding Owner}" Width="100"/>
+                    <DataGridTextColumn Header="Printer" Binding="{Binding PrinterName}" Width="120"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="100"/>
+                    <DataGridTextColumn Header="Progress" Binding="{Binding ProgressText}" Width="100"/>
+                    <DataGridTextColumn Header="Group" Binding="{Binding GroupName}" Width="120"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Configuration Panel -->
+            <Grid Grid.Column="1" Margin="10,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Job Controls -->
+                <GroupBox Grid.Row="0" Header="Job Controls">
+                    <StackPanel>
+                        <Button Content="Pause Job" Command="{Binding PauseJobCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="Resume Job" Command="{Binding ResumeJobCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Configuration -->
+                <GroupBox Grid.Row="1" Header="Configuration">
+                    <StackPanel>
+                        <TextBlock Text="Group Timeout (minutes):"/>
+                        <TextBox Text="{Binding GroupTimeoutMinutes, UpdateSourceTrigger=PropertyChanged}"/>
+                        
+                        <TextBlock Text="Enabled Printers:" Margin="0,10,0,5"/>
+                        <ListBox ItemsSource="{Binding EnabledPrinters}" Height="100"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Job Details -->
+                <GroupBox Grid.Row="2" Header="Job Details">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SelectedJob.DocumentName, StringFormat=Document: {0}}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedJob.Owner, StringFormat=Owner: {0}}"/>
+                        <TextBlock Text="{Binding SelectedJob.PrinterName, StringFormat=Printer: {0}}"/>
+                        <TextBlock Text="{Binding SelectedJob.StatusText, StringFormat=Status: {0}}"/>
+                        <TextBlock Text="{Binding SelectedJob.ProgressText, StringFormat=Progress: {0}}"/>
+                        <TextBlock Text="{Binding SelectedJob.GroupName, StringFormat=Group: {0}}"/>
+                    </StackPanel>
+                </GroupBox>
+            </Grid>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Error Message -->
+            <Border Grid.Column="0" 
+                    Background="#FFEBEE" 
+                    BorderBrush="#FFCDD2" 
+                    BorderThickness="1" 
+                    CornerRadius="3"
+                    Padding="10,5"
+                    Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="{Binding ErrorMessage}" 
+                           Foreground="#C62828"
+                           TextWrapping="Wrap"/>
+            </Border>
+
+            <!-- Busy Indicator -->
+            <ProgressBar Grid.Column="1" 
+                        Width="100" 
+                        Height="2" 
+                        IsIndeterminate="True"
+                        Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        </Grid>
     </Grid>
 </Window>
