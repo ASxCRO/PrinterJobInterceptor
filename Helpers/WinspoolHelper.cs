@@ -15,6 +15,9 @@ public static class WinspoolHelper
     [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern bool SetJob(IntPtr hPrinter, uint dwJobId, uint Level, IntPtr pJob, uint Command);
 
+    [DllImport("winspool.drv", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern bool EnumJobs(IntPtr hPrinter, uint FirstJob, uint NoJobs, uint Level, IntPtr pJob, uint cbBuf, out uint pcbNeeded, out uint pcReturned);
+
     private const uint JOB_INFO_2_CONST = 2;
     private const uint JOB_CONTROL_PAUSE = 1;
     private const uint JOB_CONTROL_RESUME = 2;
@@ -129,6 +132,57 @@ public static class WinspoolHelper
                 }
 
                 return (JOB_INFO_2)Marshal.PtrToStructure(buffer, typeof(JOB_INFO_2));
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+        }
+        finally
+        {
+            ClosePrinter(hPrinter);
+        }
+    }
+
+    public static IEnumerable<uint> GetJobIds(string printerName)
+    {
+        if (!OpenPrinter(printerName, out IntPtr hPrinter, IntPtr.Zero))
+        {
+            throw new Exception($"Failed to open printer: {Marshal.GetLastWin32Error()}");
+        }
+
+        try
+        {
+            uint needed = 0;
+            uint returned = 0;
+
+            // First call to get the required buffer size
+            EnumJobs(hPrinter, 0, uint.MaxValue, JOB_INFO_2_CONST, IntPtr.Zero, 0, out needed, out returned);
+
+            if (needed == 0)
+            {
+                return Array.Empty<uint>();
+            }
+
+            IntPtr buffer = Marshal.AllocHGlobal((int)needed);
+            try
+            {
+                if (!EnumJobs(hPrinter, 0, uint.MaxValue, JOB_INFO_2_CONST, buffer, needed, out needed, out returned))
+                {
+                    return Array.Empty<uint>();
+                }
+
+                var jobs = new List<uint>();
+                var offset = 0;
+
+                for (int i = 0; i < returned; i++)
+                {
+                    var jobInfo = (JOB_INFO_2)Marshal.PtrToStructure(IntPtr.Add(buffer, offset), typeof(JOB_INFO_2));
+                    jobs.Add(jobInfo.JobId);
+                    offset += Marshal.SizeOf(typeof(JOB_INFO_2));
+                }
+
+                return jobs;
             }
             finally
             {
