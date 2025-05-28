@@ -1,6 +1,7 @@
 ﻿using System.Windows.Input;
 
 namespace PrinterJobInterceptor.ViewModels;
+
 public class RelayCommand : ICommand
 {
     private readonly Action _execute;
@@ -12,12 +13,24 @@ public class RelayCommand : ICommand
         _canExecute = canExecute;
     }
 
-    public bool CanExecute(object parameter) => _canExecute?.Invoke() ?? true;
-    public void Execute(object parameter) => _execute();
-    public event EventHandler CanExecuteChanged;
+    public event EventHandler CanExecuteChanged
+    {
+        add => CommandManager.RequerySuggested += value;
+        remove => CommandManager.RequerySuggested -= value;
+    }
+
+    public bool CanExecute(object parameter)
+    {
+        return _canExecute == null || _canExecute();
+    }
+
+    public void Execute(object parameter)
+    {
+        _execute();
+    }
 
     public void RaiseCanExecuteChanged()
     {
-        CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        CommandManager.InvalidateRequerySuggested();
     }
 }
