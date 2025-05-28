@@ -2,8 +2,12 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PrinterJobInterceptor"
-             StartupUri="MainWindow.xaml">
+             xmlns:converters="clr-namespace:PrinterJobInterceptor.Converters">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <converters:BooleanToTextConverter x:Key="BooleanToTextConverter"/>
+            <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:BooleanToBrushConverter x:Key="BooleanToBrushConverter"/>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

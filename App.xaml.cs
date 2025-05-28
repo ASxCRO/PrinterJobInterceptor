@@ -1,40 +1,67 @@
 ﻿namespace PrinterJobInterceptor;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using PrinterJobInterceptor.Models;
 using PrinterJobInterceptor.Services;
 using PrinterJobInterceptor.Services.Interfaces;
+using PrinterJobInterceptor.ViewModels;
+using System;
+using System.IO;
 using System.Windows;
 
 public partial class App : Application
 {
-    public static IHost AppHost { get; private set; }
+    private readonly IHost _host;
+    public static IConfiguration Configuration { get; private set; }
+    public static AppConfiguration AppConfig { get; private set; }
 
     public App()
     {
-        AppHost = Host.CreateDefaultBuilder()
+        var builder = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+            .AddEnvironmentVariables();
+
+        Configuration = builder.Build();
+        AppConfig = Configuration.GetSection("PrinterJobInterceptor").Get<AppConfiguration>();
+
+        _host = Host.CreateDefaultBuilder()
             .ConfigureServices((context, services) =>
             {
-                services.AddSingleton<MainWindow>();
+                // Register services
+                services.AddSingleton<IDispatcherService, DispatcherService>();
                 services.AddSingleton<ILoggingService, SerilogLoggingService>();
-                services.AddSingleton<IConfigurationService, ConfigurationService>();
+                services.AddSingleton<IPrintJobMonitorService, PrintJobMonitorService>();
+                services.AddSingleton<IPrintJobGroupingService, PrintJobGroupingService>();
+                services.AddSingleton<IDocumentAnalysisService, DocumentAnalysisService>();
+
+                // Register ViewModels
+                services.AddTransient<MainViewModel>();
+
+                // Register configuration
+                services.AddSingleton(Configuration);
+                services.AddSingleton(AppConfig);
             })
             .Build();
     }
 
-    protected override async void OnStartup(StartupEventArgs e)
+    protected override void OnStartup(StartupEventArgs e)
     {
-        await AppHost.StartAsync();
-
-        var mainWindow = AppHost.Services.GetRequiredService<MainWindow>();
-        mainWindow.Show();
-
         base.OnStartup(e);
+
+        var mainWindow = new MainWindow
+        {
+            DataContext = _host.Services.GetRequiredService<MainViewModel>()
+        };
+        mainWindow.Show();
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    protected override void OnExit(ExitEventArgs e)
     {
-        await AppHost.StopAsync();
+        _host.Dispose();
         base.OnExit(e);
     }
 }
