@@ -11,17 +11,20 @@ public class MainViewModelTests
     private readonly Mock<IPrintJobMonitorService> _monitorServiceMock;
     private readonly Mock<IPrintJobGroupingService> _groupingServiceMock;
     private readonly Mock<ILoggingService> _loggerMock;
+    private readonly Mock<IDispatcherService> _dispatcherMock;
     private readonly MainViewModel _viewModel;
 
     public MainViewModelTests()
     {
+        _dispatcherMock = new Mock<IDispatcherService>();
         _monitorServiceMock = new Mock<IPrintJobMonitorService>();
         _groupingServiceMock = new Mock<IPrintJobGroupingService>();
         _loggerMock = new Mock<ILoggingService>();
         _viewModel = new MainViewModel(
             _monitorServiceMock.Object,
             _groupingServiceMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _dispatcherMock.Object);
     }
 
     [Fact]
